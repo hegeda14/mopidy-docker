@@ -106,7 +106,7 @@ print_section "Executing Main Process"
 if [ "$(whoami)" = "root" ]; then
     echo "Executing main process \"$@\" as non-root user \"$DOCKER_USER\" with UID $(id -u $DOCKER_USER)"
     if [[ $# -gt 0 ]]; then
-        exec sudo -u $DOCKER_USER -H "$@"
+        exec sudo -P -u $DOCKER_USER -H "$@"
     else
         exec sudo -u $DOCKER_USER -H bash
     fi

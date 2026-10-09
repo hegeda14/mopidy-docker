@@ -382,7 +382,7 @@ RUN set -ex \
     # Create the user
     && useradd -r -ms /bin/bash -g $DOCKER_GROUP -d $HOME $DOCKER_USER \
     # Add user to supplementary groups
-    && usermod -aG audio,sudo,pulse-access $DOCKER_USER \
+    && usermod -aG audio,cdrom,sudo,pulse-access $DOCKER_USER \
     # Create volume mount points so we can set permissions on them
     && mkdir -p /config /media "$HOME/local" \
     # Create mopidy config directory and symlink it
