@@ -71,7 +71,7 @@ WORKDIR /usr/src/gst-plugins-rs
 
 # Use forked version of gstreamer-spotify plugin from Nick Steel with better logging support. Using specific commit hash 3aab0473
 # Waiting for https://gitlab.freedesktop.org/gstreamer/gst-plugins-rs/-/merge_requests/1877 to be merged.
-RUN GST_PLUGINS_RS_TAG="3aab0473" \
+RUN GST_PLUGINS_RS_TAG="b9abdbcfc93544b3f1018112ba59f76c6282e312" \
     && echo "Selected commit hash for gst-plugins-rs: $GST_PLUGINS_RS_TAG" \
     # - Clone repository of gst-plugins-rs to workdir
     # Note: We clone the branch first, then checkout the specific hash to be safe
