@@ -79,6 +79,7 @@ RUN GST_PLUGINS_RS_TAG="3aab0473" \
         --single-branch \
         --branch spotify-logging \
         https://gitlab.freedesktop.org/kingosticks/gst-plugins-rs.git ./ \
+    && git fetch origin "$GST_PLUGINS_RS_TAG" \
     && git checkout "$GST_PLUGINS_RS_TAG"
 
 
