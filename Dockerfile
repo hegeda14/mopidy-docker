@@ -210,7 +210,6 @@ RUN \
     elif [ "$MOPIDY_VERSION" = "fixed" ]; then \
         MOPIDY_BRANCH_OR_TAG=v3.4.2; \
     else \
-        else \
         echo "Invalid version info for Mopidy: $MOPIDY_VERSION" && exit 1; \
     fi \
     && echo "Cloning Mopidy tag: $MOPIDY_BRANCH_OR_TAG" \
