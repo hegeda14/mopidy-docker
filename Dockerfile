@@ -214,7 +214,7 @@ RUN \
     fi \
     && echo "Cloning Mopidy tag: $MOPIDY_BRANCH_OR_TAG" \
     && git clone --single-branch -b ${MOPIDY_BRANCH_OR_TAG} https://github.com/mopidy/mopidy.git /src/mopidy \
-    && if [ "$MOPIDY_VERSION" = "release" ]; then \
+    && if [ "$MOPIDY_VERSION" = "fixed" ]; then \
         # -------------------------------------------------------------------------
         # FIX: GStreamer 1.24+ Compatibility Patch (Manual Sed for v3.4.2)
         #
@@ -384,7 +384,7 @@ ENV XDG_MUSIC_DIR=/media
 RUN set -ex \
     # Create the group only if it does not already exist
     && (getent group $DOCKER_GROUP || groupadd -r $DOCKER_GROUP) \
-    # Create the user
+    # Create the usercdrom
     && useradd -r -ms /bin/bash -g $DOCKER_GROUP -d $HOME $DOCKER_USER \
     # Add user to supplementary groups
     && usermod -aG audio,cdrom,sudo,pulse-access $DOCKER_USER \
