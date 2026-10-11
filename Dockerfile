@@ -5,8 +5,8 @@
 ################################################################################
 FROM rust:slim-bookworm AS rust-builder
 
-LABEL org.opencontainers.image.authors="jojo141185"
-LABEL org.opencontainers.image.source="https://github.com/jojo141185/mopidy-docker/"
+LABEL org.opencontainers.image.authors="hegeda14"
+LABEL org.opencontainers.image.source="https://github.com/hegeda14/mopidy-docker/"
 
 # Automatic platform ARGs for BuildKit
 # This feature is only available when using the BuildKit backend.
@@ -116,7 +116,7 @@ RUN export CSOUND_LIB_DIR="/usr/lib/$(uname -m)-linux-gnu" \
 ################################################################################
 FROM node:18-slim AS frontend-builder
 
-ARG IMG_VERSION
+ARG IRIS_VERSION
 
 # Install build dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -132,15 +132,15 @@ ADD https://api.github.com/repos/jaedb/Iris/git/refs/heads/master /tmp/version.j
 
 # Clone the Iris repository into a new directory named /iris
 RUN \
-    # Step 1: Determine the correct branch or tag based on IMG_VERSION
-    if [ "$IMG_VERSION" = "latest" ]; then \
+    # Step 1: Determine the correct branch or tag based on IRIS_VERSION
+    if [ "$IRIS_VERSION" = "latest" ]; then \
         IRIS_BRANCH_OR_TAG=master; \
-    elif [ "$IMG_VERSION" = "develop" ]; then \
+    elif [ "$IRIS_VERSION" = "develop" ]; then \
         IRIS_BRANCH_OR_TAG=develop; \
-    elif [ "$IMG_VERSION" = "release" ]; then \
+    elif [ "$IRIS_VERSION" = "release" ]; then \
         IRIS_BRANCH_OR_TAG=$(curl -s https://api.github.com/repos/jaedb/Iris/releases/latest | jq -r .tag_name); \
     else \
-        echo "Invalid version info for Iris: $IMG_VERSION"; \
+        echo "Invalid version info for Iris: $IRIS_VERSION"; \
         exit 1; \
     fi \
     && echo "Selected branch or tag for Iris: $IRIS_BRANCH_OR_TAG" \
@@ -163,7 +163,7 @@ RUN npm install && npm run prod && rm -rf node_modules
 ################################################################################
 FROM debian:trixie-slim AS python-builder
 
-ARG IMG_VERSION
+ARG MOPIDY_VERSION
 
 # Install build-time dependencies needed for Python packages.
 # We include python3-full to ensure venv and all stdlibs are available.
@@ -198,21 +198,24 @@ WORKDIR /wheels
 
 # --- Mopidy source ---
 RUN \
-    # Step 1: Determine the correct branch or tag based on IMG_VERSION
-    if [ "$IMG_VERSION" = "release" ]; then \
+    # Step 1: Determine the correct branch or tag based on MOPIDY_VERSION
+    if [ "$MOPIDY_VERSION" = "release" ]; then \
         echo "Determining latest stable release tag from GitHub..." \
         && MOPIDY_BRANCH_OR_TAG=$(curl -s https://api.github.com/repos/mopidy/mopidy/releases/latest | jq -r '.tag_name'); \
-    elif [ "$IMG_VERSION" = "latest" ]; then \
+    elif [ "$MOPIDY_VERSION" = "latest" ]; then \
         echo "Determining latest pre-release tag from GitHub..." \
         && MOPIDY_BRANCH_OR_TAG=$(curl -s https://api.github.com/repos/mopidy/mopidy/releases | jq -r 'map(select(.draft == false)) | .[0].tag_name'); \
-    elif [ "$IMG_VERSION" = "develop" ]; then \
+    elif [ "$MOPIDY_VERSION" = "develop" ]; then \
         MOPIDY_BRANCH_OR_TAG=main; \
+    elif [ "$MOPIDY_VERSION" = "fixed" ]; then \
+        MOPIDY_BRANCH_OR_TAG=v3.4.2; \
     else \
-        echo "Invalid version info for Mopidy: $IMG_VERSION" && exit 1; \
+        else \
+        echo "Invalid version info for Mopidy: $MOPIDY_VERSION" && exit 1; \
     fi \
     && echo "Cloning Mopidy tag: $MOPIDY_BRANCH_OR_TAG" \
     && git clone --single-branch -b ${MOPIDY_BRANCH_OR_TAG} https://github.com/mopidy/mopidy.git /src/mopidy \
-    && if [ "$IMG_VERSION" = "release" ]; then \
+    && if [ "$MOPIDY_VERSION" = "release" ]; then \
         # -------------------------------------------------------------------------
         # FIX: GStreamer 1.24+ Compatibility Patch (Manual Sed for v3.4.2)
         #
@@ -237,17 +240,19 @@ RUN \
     fi \
     && cd /wheels
 
+ARG MOPSPOT_VERSION
+
 # --- Mopidy-Spotify source ---
 RUN \
-    if [ "$IMG_VERSION" = "release" ]; then \
+    if [ "$MOPSPOT_VERSION" = "release" ]; then \
         MOPSPOT_BRANCH_OR_TAG="v5.0.0a3"; \
-    elif [ "$IMG_VERSION" = "latest" ]; then \
+    elif [ "$MOPSPOT_VERSION" = "latest" ]; then \
         echo "Determining latest pre-release tag from GitHub..." \
         && MOPSPOT_BRANCH_OR_TAG=$(curl -s https://api.github.com/repos/mopidy/mopidy-spotify/releases | jq -r 'map(select(.draft == false)) | .[0].tag_name'); \
-    elif [ "$IMG_VERSION" = "develop" ]; then \
+    elif [ "$MOPSPOT_VERSION" = "develop" ]; then \
         MOPSPOT_BRANCH_OR_TAG=main; \
     else \
-        echo "Invalid version info for Mopidy-Spotify: $IMG_VERSION" && exit 1; \
+        echo "Invalid version info for Mopidy-Spotify: $MOPSPOT_VERSION" && exit 1; \
     fi \
     && echo "Cloning Mopidy-Spotify tag: $MOPSPOT_BRANCH_OR_TAG" \
     && git clone --single-branch -b ${MOPSPOT_BRANCH_OR_TAG} https://github.com/mopidy/mopidy-spotify.git /src/mopidy-spotify
