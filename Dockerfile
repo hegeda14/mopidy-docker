@@ -1,112 +1,9 @@
-################################################################################
-# Stage 1: Build GStreamer plugins written in Rust
-#
-# This stage uses a Rust environment to compile the custom GStreamer plugins.
-################################################################################
-FROM rust:slim-bookworm AS rust-builder
-
-LABEL org.opencontainers.image.authors="hegeda14"
-LABEL org.opencontainers.image.source="https://github.com/hegeda14/mopidy-docker/"
-
-# Automatic platform ARGs for BuildKit
-# This feature is only available when using the BuildKit backend.
-ARG TARGETPLATFORM
-ARG TARGETARCH
-ARG TARGETVARIANT
-
-# Print Info about current build
-RUN printf "I'm building for TARGETPLATFORM=${TARGETPLATFORM}" \
-    && printf ", TARGETARCH=${TARGETARCH}" \
-    && printf ", TARGETVARIANT=${TARGETVARIANT} \n" \
-    && printf "With uname -s : " && uname -s \
-    && printf "and  uname -m : " && uname -m \
-    && printf "\n --------------------------- \n"
-
-# Install build dependencies for the Rust plugin
-# Added 'binutils' to provide the 'strip' command for size optimization
-RUN apt-get update && apt-get install -yq --no-install-recommends \
-        build-essential \
-        cmake \
-        curl \
-        jq \
-        git \
-        patch \
-        binutils \
-        libgstreamer-plugins-base1.0-dev \
-        libgstreamer1.0-dev \
-        libcsound64-dev \
-        libclang-dev \
-        libpango1.0-dev  \
-        libdav1d-dev \
-    && rm -rf /var/lib/apt/lists/*
-
-WORKDIR /usr/src/gst-plugins-rs
-
-# ---------------------------------
-# ---  GStreamer Plugins        ---
-#
-# Get source of gst-plugins-rs
-#
-# # - Select the branch or tag to use
-# RUN if [ "$IMG_VERSION" = "latest" ]; then \
-#         GST_PLUGINS_RS_TAG=main; \
-#     elif [ "$IMG_VERSION" = "develop" ]; then \
-#         GST_PLUGINS_RS_TAG=main; \
-#     elif [ "$IMG_VERSION" = "release" ]; then \
-#         GST_PLUGINS_RS_TAG=$(curl -s https://gitlab.freedesktop.org/api/v4/projects/gstreamer%2Fgst-plugins-rs/repository/tags | jq -r '.[0].name'); \
-#     else \
-#         echo "Invalid version info for gst-plugins-rs: $IMG_VERSION"; \
-#         exit 1; \
-#     fi \ 
-#     && echo "Selected branch or tag for gst-plugins-rs: $GST_PLUGINS_RS_TAG" \
-#     # - Clone repository of gst-plugins-rs to workdir
-#     && git clone -c advice.detachedHead=false \
-# 	--single-branch --depth 1 \
-# 	--branch ${GST_PLUGINS_RS_TAG} \
-# 	https://gitlab.freedesktop.org/gstreamer/gst-plugins-rs.git ./
-#
-
-# # Use forked version of gstreamer-spotify plugin from Nick Steel with better logging support. Using specific commit hash 3aab0473
-# # Waiting for https://gitlab.freedesktop.org/gstreamer/gst-plugins-rs/-/merge_requests/1877 to be merged.
-# RUN GST_PLUGINS_RS_TAG="b9abdbcfc93544b3f1018112ba59f76c6282e312" \
-#     && echo "Selected commit hash for gst-plugins-rs: $GST_PLUGINS_RS_TAG" \
-#     # - Clone repository of gst-plugins-rs to workdir
-#     # Note: We clone the branch first, then checkout the specific hash to be safe
-#     && git clone -c advice.detachedHead=false \
-#         --single-branch \
-#         --branch spotify-logging \
-#         https://gitlab.freedesktop.org/kingosticks/gst-plugins-rs.git ./ \
-#     && git fetch origin "$GST_PLUGINS_RS_TAG" \
-#     && git checkout "$GST_PLUGINS_RS_TAG"
-
-
-# # Build GStreamer plugins written in Rust
-# #
-# # Set Cargo environment variables
-# ENV DEST_DIR="/target/gst-plugins-rs"
-# ENV CARGO_PROFILE_RELEASE_DEBUG="false"
-# # Cargo Build, with options:
-# # --release: do a release (not dev) build
-# # --no-default-features: disables the default features of the package (optional)
-# # --config net.git-fetch-with-cli=true: Uses command-line git instead of  built-in libgit2 to fix OOM Problem (exit code: 137) 
-# RUN export CSOUND_LIB_DIR="/usr/lib/$(uname -m)-linux-gnu" \
-#     && export PLUGINS_DIR=$(pkg-config --variable=pluginsdir gstreamer-1.0) \
-#     && export SO_SUFFIX=so \
-#     && cargo build --release --no-default-features --config net.git-fetch-with-cli=true \
-#         # List of packages to build
-#         --package gst-plugin-spotify \
-#     # Use install command to create directory (-d), copy and print filenames (-v), and set attributes/permissions (-m)
-#     && install -v -d ${DEST_DIR}/${PLUGINS_DIR} \
-#     # OPTIMIZATION: Strip debug symbols from the library to significantly reduce size
-#     && strip --strip-all target/release/*.${SO_SUFFIX} \
-#     && install -v -m 755 target/release/*.${SO_SUFFIX} ${DEST_DIR}/${PLUGINS_DIR} \
-#     && cargo clean
-# ---------------------------------
-#
-#################################################################
+LABEL org.opencontainers.image.title="Mopidy"
+LABEL org.opencontainers.image.description="Mopidy music server with Iris web UI"
+LABEL org.opencontainers.image.source="https://github.com/hegeda14/mopidy-docker"
 
 ################################################################################
-# Stage 2: Build Iris Web UI frontend
+# Stage 1: Build Iris Web UI frontend
 #
 # This stage only builds the static assets (JS/CSS) for the Iris web interface.
 ################################################################################
@@ -150,7 +47,7 @@ WORKDIR /iris
 RUN npm install && npm run prod && rm -rf node_modules
 
 ################################################################################
-# Stage 3: Build Python wheels
+# Stage 2: Build Python wheels
 #
 # This stage acts as a "wheel factory". It downloads and builds all Python
 # packages and their dependencies into a single folder of .whl files.
@@ -278,13 +175,14 @@ RUN \
         /src/iris
 
 ################################################################################
-# Stage 4: Final Release Image
+# Stage 3: Final Release Image
 #
 # CRITICAL CHANGE: Switched to debian:trixie-slim (Testing).
 # This provides the Python version (3.13+) required by Mopidy 4.0.
 ################################################################################
 FROM debian:trixie-slim AS release
 
+# Required for gst-plugin-spotify
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         ca-certificates \
@@ -355,9 +253,6 @@ RUN ${VENV_PATH}/bin/pip install --no-index --find-links=/wheels \
     && rm -rf /wheels \
     && rm -rf /root/.cache/pip
 
-# Copy the pre-built GStreamer plugin
-#COPY --from=rust-builder /target/gst-plugins-rs/ /
-
 # Copy the Iris directory which contains the static web assets
 COPY --from=frontend-builder /iris /iris
 
@@ -390,7 +285,7 @@ ENV XDG_MUSIC_DIR=/media
 RUN set -ex \
     # Create the group only if it does not already exist
     && (getent group $DOCKER_GROUP || groupadd -r $DOCKER_GROUP) \
-    # Create the usercdrom
+    # Create the user
     && useradd -r -ms /bin/bash -g $DOCKER_GROUP -d $HOME $DOCKER_USER \
     # Add user to supplementary groups
     && usermod -aG audio,cdrom,sudo,pulse-access $DOCKER_USER \
