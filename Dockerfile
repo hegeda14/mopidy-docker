@@ -360,7 +360,7 @@ RUN ${VENV_PATH}/bin/pip install --no-index --find-links=/wheels \
     && rm -rf /root/.cache/pip
 
 # Copy the pre-built GStreamer plugin
-COPY --from=rust-builder /target/gst-plugins-rs/ /
+#COPY --from=rust-builder /target/gst-plugins-rs/ /
 
 # Copy the Iris directory which contains the static web assets
 COPY --from=frontend-builder /iris /iris
