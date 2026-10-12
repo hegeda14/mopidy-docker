@@ -1,13 +1,13 @@
-LABEL org.opencontainers.image.title="Mopidy"
-LABEL org.opencontainers.image.description="Mopidy music server with Iris web UI"
-LABEL org.opencontainers.image.source="https://github.com/hegeda14/mopidy-docker"
-
 ################################################################################
 # Stage 1: Build Iris Web UI frontend
 #
 # This stage only builds the static assets (JS/CSS) for the Iris web interface.
 ################################################################################
 FROM node:18-slim AS frontend-builder
+
+LABEL org.opencontainers.image.title="Mopidy"
+LABEL org.opencontainers.image.description="Mopidy music server with Iris web UI"
+LABEL org.opencontainers.image.source="https://github.com/hegeda14/mopidy-docker"
 
 ARG IRIS_VERSION
 
