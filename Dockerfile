@@ -69,41 +69,54 @@ WORKDIR /usr/src/gst-plugins-rs
 # 	https://gitlab.freedesktop.org/gstreamer/gst-plugins-rs.git ./
 #
 
-# Use forked version of gstreamer-spotify plugin from Nick Steel with better logging support. Using specific commit hash 3aab0473
-# Waiting for https://gitlab.freedesktop.org/gstreamer/gst-plugins-rs/-/merge_requests/1877 to be merged.
-RUN GST_PLUGINS_RS_TAG="b9abdbcfc93544b3f1018112ba59f76c6282e312" \
-    && echo "Selected commit hash for gst-plugins-rs: $GST_PLUGINS_RS_TAG" \
-    # - Clone repository of gst-plugins-rs to workdir
-    # Note: We clone the branch first, then checkout the specific hash to be safe
-    && git clone -c advice.detachedHead=false \
-        --single-branch \
-        --branch spotify-logging \
-        https://gitlab.freedesktop.org/kingosticks/gst-plugins-rs.git ./ \
-    && git fetch origin "$GST_PLUGINS_RS_TAG" \
-    && git checkout "$GST_PLUGINS_RS_TAG"
+# # Use forked version of gstreamer-spotify plugin from Nick Steel with better logging support. Using specific commit hash 3aab0473
+# # Waiting for https://gitlab.freedesktop.org/gstreamer/gst-plugins-rs/-/merge_requests/1877 to be merged.
+# RUN GST_PLUGINS_RS_TAG="b9abdbcfc93544b3f1018112ba59f76c6282e312" \
+#     && echo "Selected commit hash for gst-plugins-rs: $GST_PLUGINS_RS_TAG" \
+#     # - Clone repository of gst-plugins-rs to workdir
+#     # Note: We clone the branch first, then checkout the specific hash to be safe
+#     && git clone -c advice.detachedHead=false \
+#         --single-branch \
+#         --branch spotify-logging \
+#         https://gitlab.freedesktop.org/kingosticks/gst-plugins-rs.git ./ \
+#     && git fetch origin "$GST_PLUGINS_RS_TAG" \
+#     && git checkout "$GST_PLUGINS_RS_TAG"
 
 
-# Build GStreamer plugins written in Rust
-#
-# Set Cargo environment variables
-ENV DEST_DIR="/target/gst-plugins-rs"
-ENV CARGO_PROFILE_RELEASE_DEBUG="false"
-# Cargo Build, with options:
-# --release: do a release (not dev) build
-# --no-default-features: disables the default features of the package (optional)
-# --config net.git-fetch-with-cli=true: Uses command-line git instead of  built-in libgit2 to fix OOM Problem (exit code: 137) 
-RUN export CSOUND_LIB_DIR="/usr/lib/$(uname -m)-linux-gnu" \
-    && export PLUGINS_DIR=$(pkg-config --variable=pluginsdir gstreamer-1.0) \
-    && export SO_SUFFIX=so \
-    && cargo build --release --no-default-features --config net.git-fetch-with-cli=true \
-        # List of packages to build
-        --package gst-plugin-spotify \
-    # Use install command to create directory (-d), copy and print filenames (-v), and set attributes/permissions (-m)
-    && install -v -d ${DEST_DIR}/${PLUGINS_DIR} \
-    # OPTIMIZATION: Strip debug symbols from the library to significantly reduce size
-    && strip --strip-all target/release/*.${SO_SUFFIX} \
-    && install -v -m 755 target/release/*.${SO_SUFFIX} ${DEST_DIR}/${PLUGINS_DIR} \
-    && cargo clean
+# # Build GStreamer plugins written in Rust
+# #
+# # Set Cargo environment variables
+# ENV DEST_DIR="/target/gst-plugins-rs"
+# ENV CARGO_PROFILE_RELEASE_DEBUG="false"
+# # Cargo Build, with options:
+# # --release: do a release (not dev) build
+# # --no-default-features: disables the default features of the package (optional)
+# # --config net.git-fetch-with-cli=true: Uses command-line git instead of  built-in libgit2 to fix OOM Problem (exit code: 137) 
+# RUN export CSOUND_LIB_DIR="/usr/lib/$(uname -m)-linux-gnu" \
+#     && export PLUGINS_DIR=$(pkg-config --variable=pluginsdir gstreamer-1.0) \
+#     && export SO_SUFFIX=so \
+#     && cargo build --release --no-default-features --config net.git-fetch-with-cli=true \
+#         # List of packages to build
+#         --package gst-plugin-spotify \
+#     # Use install command to create directory (-d), copy and print filenames (-v), and set attributes/permissions (-m)
+#     && install -v -d ${DEST_DIR}/${PLUGINS_DIR} \
+#     # OPTIMIZATION: Strip debug symbols from the library to significantly reduce size
+#     && strip --strip-all target/release/*.${SO_SUFFIX} \
+#     && install -v -m 755 target/release/*.${SO_SUFFIX} ${DEST_DIR}/${PLUGINS_DIR} \
+#     && cargo clean
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        ca-certificates \
+        wget \
+    && mkdir -p /etc/apt/keyrings \
+    && wget -q -O /etc/apt/keyrings/mopidy-archive-keyring.gpg \
+        https://apt.mopidy.com/mopidy-archive-keyring.gpg \
+    && wget -q -O /etc/apt/sources.list.d/mopidy.sources \
+        https://apt.mopidy.com/trixie.sources \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends gst-plugin-spotify \
+    && rm -rf /var/lib/apt/lists/*
 
 # ---------------------------------
 #
