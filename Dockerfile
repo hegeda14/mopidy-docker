@@ -13,8 +13,6 @@ LABEL org.opencontainers.image.source="https://github.com/hegeda14/mopidy-docker
 ARG TARGETPLATFORM
 ARG TARGETARCH
 ARG TARGETVARIANT
-# Define Image version [latest, develop, release]
-ARG IMG_VERSION
 
 # Print Info about current build
 RUN printf "I'm building for TARGETPLATFORM=${TARGETPLATFORM}" \
@@ -22,8 +20,7 @@ RUN printf "I'm building for TARGETPLATFORM=${TARGETPLATFORM}" \
     && printf ", TARGETVARIANT=${TARGETVARIANT} \n" \
     && printf "With uname -s : " && uname -s \
     && printf "and  uname -m : " && uname -m \
-    && printf "\n --------------------------- \n" \
-    && printf "Build Image in version: ${IMG_VERSION}"
+    && printf "\n --------------------------- \n"
 
 # Install build dependencies for the Rust plugin
 # Added 'binutils' to provide the 'strip' command for size optimization
@@ -164,16 +161,6 @@ FROM debian:trixie-slim AS python-builder
 
 ARG MOPIDY_VERSION
 
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-        ca-certificates \
-        wget \
-    && mkdir -p /etc/apt/keyrings \
-    && wget -q -O /etc/apt/keyrings/mopidy-archive-keyring.gpg \
-        https://apt.mopidy.com/mopidy-archive-keyring.gpg \
-    && wget -q -O /etc/apt/sources.list.d/mopidy.sources \
-        https://apt.mopidy.com/trixie.sources
-
 # Install build-time dependencies needed for Python packages.
 # We include python3-full to ensure venv and all stdlibs are available.
 # We also include development headers (libgirepository1.0-dev AND 2.0-dev) to allow
@@ -192,7 +179,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libgirepository1.0-dev \
         libgirepository-2.0-dev \
         libglib2.0-dev \
-        gst-plugin-spotify \
         libffi-dev \
         libcairo2-dev \
         libasound2-dev \
@@ -299,7 +285,16 @@ RUN \
 ################################################################################
 FROM debian:trixie-slim AS release
 
-ARG IMG_VERSION
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        ca-certificates \
+        wget \
+    && mkdir -p /etc/apt/keyrings \
+    && wget -q -O /etc/apt/keyrings/mopidy-archive-keyring.gpg \
+        https://apt.mopidy.com/mopidy-archive-keyring.gpg \
+    && wget -q -O /etc/apt/sources.list.d/mopidy.sources \
+        https://apt.mopidy.com/trixie.sources
+
 WORKDIR /
 
 # Install only essential runtime packages
@@ -330,6 +325,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         gstreamer1.0-plugins-bad \
         gstreamer1.0-plugins-ugly \
         gstreamer1.0-libav \
+        gst-plugin-spotify \
         pulseaudio \
         # Add git to install Mopidy extensions from repositories if needed
         git \
