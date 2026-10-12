@@ -104,20 +104,6 @@ WORKDIR /usr/src/gst-plugins-rs
 #     && strip --strip-all target/release/*.${SO_SUFFIX} \
 #     && install -v -m 755 target/release/*.${SO_SUFFIX} ${DEST_DIR}/${PLUGINS_DIR} \
 #     && cargo clean
-
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-        ca-certificates \
-        wget \
-    && mkdir -p /etc/apt/keyrings \
-    && wget -q -O /etc/apt/keyrings/mopidy-archive-keyring.gpg \
-        https://apt.mopidy.com/mopidy-archive-keyring.gpg \
-    && wget -q -O /etc/apt/sources.list.d/mopidy.sources \
-        https://apt.mopidy.com/trixie.sources \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends gst-plugin-spotify \
-    && rm -rf /var/lib/apt/lists/*
-
 # ---------------------------------
 #
 #################################################################
@@ -178,6 +164,16 @@ FROM debian:trixie-slim AS python-builder
 
 ARG MOPIDY_VERSION
 
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        ca-certificates \
+        wget \
+    && mkdir -p /etc/apt/keyrings \
+    && wget -q -O /etc/apt/keyrings/mopidy-archive-keyring.gpg \
+        https://apt.mopidy.com/mopidy-archive-keyring.gpg \
+    && wget -q -O /etc/apt/sources.list.d/mopidy.sources \
+        https://apt.mopidy.com/trixie.sources
+
 # Install build-time dependencies needed for Python packages.
 # We include python3-full to ensure venv and all stdlibs are available.
 # We also include development headers (libgirepository1.0-dev AND 2.0-dev) to allow
@@ -196,6 +192,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libgirepository1.0-dev \
         libgirepository-2.0-dev \
         libglib2.0-dev \
+        gst-plugin-spotify \
         libffi-dev \
         libcairo2-dev \
         libasound2-dev \
